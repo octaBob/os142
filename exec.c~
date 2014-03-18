@@ -6,20 +6,12 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
-//--------------------- ROBERT: ------------------------//
+//----------------------- PATCH -------------------//
 char PATH[MAX_PATH_ENTRIES][INPUT_BUF] ;
 int lastPath = 0;
-// -----------------------------------------------------//
+//----------------------- PATCH -------------------//
   
-int add_path(char* path){
-  if (lastPath==9){
-    cprintf("could not add path - all paths in use\n");
-    return -1;
-  }
-  strncpy(PATH[lastPath], path;
-  lastPath++;
-  return 0;
-}
+
 
 int
 exec(char *path, char **argv)
@@ -33,7 +25,7 @@ exec(char *path, char **argv)
   pde_t *pgdir, *oldpgdir;
 
   
-  //--------- PATCHED -------------------------------//
+  //----------------------- PATCh -------------------//
   if((ip = namei(path)) == 0){
       for(i = 0; i<lastPath; i++){
 	  cprintf("%d\n", i);
@@ -47,7 +39,7 @@ exec(char *path, char **argv)
   }
   cont:
   //cprintf("%d\n", ip);
-  //----------------------------------------------------//
+//----------------------- PATCh -------------------//
   ilock(ip);
   pgdir = 0;
 

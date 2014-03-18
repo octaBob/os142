@@ -6,6 +6,19 @@
 #include "mmu.h"
 #include "proc.h"
 
+//------------------- PATCH -------------------//
+int
+sys_addPath(void)
+{
+  char *path;
+  if(argint(0, *path) < 0)
+    return -1;
+  return add_path(path);
+}
+
+//------------------- PATCH -------------------//
+
+
 int
 sys_fork(void)
 {

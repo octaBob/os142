@@ -7,6 +7,20 @@
 #include "proc.h"
 #include "spinlock.h"
 
+//----------------------- PATCH -------------------//
+extern int lastPath;
+extern char** PATH;
+
+int add_path(char* path){
+  if (lastPath==9){
+    cprintf("could not add path - all paths in use\n");
+    return -1;
+  }
+  strncpy(PATH[lastPath], path, strlen(path));
+  lastPath++;
+  return 0;
+}
+//----------------------- PATCH -------------------//
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
