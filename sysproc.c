@@ -7,11 +7,14 @@
 #include "proc.h"
 
 //------------------- PATCH -------------------//
+
+extern int add_path(char *);
+
 int
 sys_addPath(void)
 {
   char *path;
-  if(argint(0, *path) < 0)
+  if(argstr(0, &path) < 0)
     return -1;
   return add_path(path);
 }
