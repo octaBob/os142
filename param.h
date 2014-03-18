@@ -9,4 +9,8 @@
 #define ROOTDEV       1  // device number of file system root disk
 #define MAXARG       32  // max exec arguments
 #define LOGSIZE      10  // max data sectors in on-disk log
+//--------------------- added ---------------------------------//
+#define INPUT_BUF   128  // max size of input buffer
+#define MAX_PATH_ENTRIES 10 // max number of path entries history
+//--------------------- added ---------------------------------//
 
