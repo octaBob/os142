@@ -124,6 +124,8 @@ panic(char *s)
 //PAGEBREAK: 50
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
+#define LEFTARROW 0xE4
+#define RIGHTARROW 
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
 static void
@@ -139,10 +141,18 @@ cgaputc(int c)
 
   if(c == '\n')
     pos += 80 - pos%80;
-  else if(c == BACKSPACE){
+  else if((c == BACKSPACE)||(c == LEFTARROW)){
     if(pos > 0) --pos;
-  } else
+  } else{
+    //--------------------patch ---------------//
     crt[pos++] = (c&0xff) | 0x0700;  // black on white
+    while (pos<80){
+	crt[pos++] = (input.rm&0xff) | 0x0700;
+    }
+    //crt[pos++] = (c&0xff) | 0x0700;  // black on white
+    
+    //--------------------patch ---------------//
+  }
   
   if((pos/80) >= 24){  // Scroll up.
     memmove(crt, crt+80, sizeof(crt[0])*23*80);
@@ -154,7 +164,8 @@ cgaputc(int c)
   outb(CRTPORT+1, pos>>8);
   outb(CRTPORT, 15);
   outb(CRTPORT+1, pos);
-  crt[pos] = ' ' | 0x0700;
+  if(c==BACKSPACE)
+      crt[pos] = ' ' | 0x0700;
 }
 
 void
@@ -180,6 +191,7 @@ struct {
   uint r;  // Read index
   uint w;  // Write index
   uint e;  // Edit index
+  uint rm; // Right-most index
 } input;
 
 #define C(x)  ((x)-'@')  // Control-x
@@ -187,8 +199,8 @@ struct {
 void
 consoleintr(int (*getc)(void))
 {
+  int i;
   int c;
-
   acquire(&input.lock);
   while((c = getc()) >= 0){
     switch(c){
@@ -199,20 +211,38 @@ consoleintr(int (*getc)(void))
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
+	input.rm--;
         consputc(BACKSPACE);
       }
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
+	input.rm--;
         consputc(BACKSPACE);
       }
       break;
+    //------------------- PATCH ------------------//
+    case LEFTARROW:
+	if(input.e != input.w){
+	  input.e--;
+	  consputc(LEFTARROW);
+	}
+	break;
+    //------------------- PATCH ------------------//
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
-        input.buf[input.e++ % INPUT_BUF] = c;
+	
+	for (i=input.rm; i>input.e; i--){
+ 	    input.buf[i % INPUT_BUF] = input.buf[i-1 %INPUT_BUF];
+	}
+	
+	input.rm++;
+	input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
+	//cprintf("this is rm: %d\n",input.rm);
+	//cprintf("this is e: %d\n",input.e);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           input.w = input.e;
           wakeup(&input.r);
