@@ -125,7 +125,7 @@ panic(char *s)
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
 #define LEFTARROW 0xE4
-#define RIGHTARROW 
+#define RIGHTARROW 0xE5
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
 static void
@@ -138,21 +138,22 @@ cgaputc(int c)
   pos = inb(CRTPORT+1) << 8;
   outb(CRTPORT, 15);
   pos |= inb(CRTPORT+1);
-
+  
   if(c == '\n')
     pos += 80 - pos%80;
+  
   else if((c == BACKSPACE)||(c == LEFTARROW)){
-    if(pos > 0) --pos;
-  } else{
-    //--------------------patch ---------------//
-    crt[pos++] = (c&0xff) | 0x0700;  // black on white
-    while (pos<80){
-	crt[pos++] = (c&0xff) | 0x0700;
-    }
-    //crt[pos++] = (c&0xff) | 0x0700;  // black on white
-    
-    //--------------------patch ---------------//
+    if(pos > 0)
+      --pos;
   }
+  
+  else if(c== RIGHTARROW){
+     if(pos > 0)
+	++pos;
+
+  }else 
+  crt[pos++] = (c&0xff) | 0x0700;  // black on white
+  
   
   if((pos/80) >= 24){  // Scroll up.
     memmove(crt, crt+80, sizeof(crt[0])*23*80);
@@ -196,6 +197,15 @@ struct {
 
 #define C(x)  ((x)-'@')  // Control-x
 
+//-----------------PATCH--------------------//
+#define MAX_HISTORY_BUF 128
+#define MAX_HISTORY_ENTRIES 20
+static char history[MAX_HISTORY_ENTRIES][MAX_HISTORY_BUF]; 
+static int hstryPos = 0;
+static int hstryNext = 0;
+//-----------------PATCH--------------------//
+
+
 void
 consoleintr(int (*getc)(void))
 {
@@ -217,12 +227,27 @@ consoleintr(int (*getc)(void))
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
-        input.e--;
-	input.rm--;
-        consputc(BACKSPACE);
+	consputc(BACKSPACE);
+	input.e--;
+	if(input.e < input.rm){
+	  for (i=input.e; i<input.rm; i++){
+	      input.buf[i % INPUT_BUF] = input.buf[i+1 %INPUT_BUF];
+	  }
+	  for(i = input.e; i <=input.rm; i++)
+	      consputc(input.buf[i %INPUT_BUF]);
+	  for(i = input.e; i <=input.rm; ++i)
+	      consputc(LEFTARROW);
+	}
       }
       break;
     //------------------- PATCH ------------------//
+      
+    case RIGHTARROW:
+	if(input.e < input.rm){
+	  input.e++;
+	  consputc(RIGHTARROW);
+	}
+	break;
     case LEFTARROW:
 	if(input.e != input.w){
 	  input.e--;
@@ -234,17 +259,43 @@ consoleintr(int (*getc)(void))
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
 	
-	for (i=input.rm; i>input.e; i--){
- 	    input.buf[i % INPUT_BUF] = input.buf[i-1 %INPUT_BUF];
+	if(c == '\n'){
+	  
+	  input.e = input.rm;
+	  input.buf[input.e++ % INPUT_BUF] = c;
+	  consputc(c);
+	  //cprintf("buf enter after left:%s\n",input.buf);
+	}else{
+	 for (i=input.e; i<input.rm; i++){
+ 	    input.buf[i % INPUT_BUF] = input.buf[i+1 %INPUT_BUF];
+	 }
+	  input.buf[input.e++ % INPUT_BUF] = c;
+	  consputc(c);
+
+	  for(i = input.e; i <= input.rm; ++i)
+	    consputc(input.buf[i]);
+	  input.rm++;
+	  for(i = input.e; i < input.rm; ++i)
+	    consputc(LEFTARROW);
 	}
-	
-	input.rm++;
-	input.buf[input.e++ % INPUT_BUF] = c;
-        consputc(c);
-	//cprintf("this is rm: %d\n",input.rm);
-	//cprintf("this is e: %d\n",input.e);
+
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+	  cprintf("bufEnter:%s\n",input.buf);
           input.w = input.e;
+	  input.rm = input.e;
+	  
+	  //
+	  char command[MAX_HISTORY_BUF];
+	  for (i=0; i < input.e - input.r; i++) {
+	    command[i] = input.buf[input.r + i];
+	  }
+	  command[i] = '\n'; 
+	  strncpy(history[hstryNext],command,strlen(command));
+	  hstryNext = ((hstryNext + 1) % MAX_HISTORY_ENTRIES);
+	  hstryPos = hstryNext;
+	  
+	  cprintf("history:%s\n",history);
+	  //
           wakeup(&input.r);
         }
       }
