@@ -22,6 +22,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+//----------------------Patch-------------------//
+int add_path(char*);
+//----------------------Patch-------------------//
 
 // ulib.c
 int stat(char*, struct stat*);

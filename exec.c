@@ -7,15 +7,15 @@
 #include "x86.h"
 #include "elf.h"
 //----------------------- PATCH -------------------//
-char PATH[MAX_PATH_ENTRIES][INPUT_BUF] ;
-int lastPath = 0;
+char PATH[MAX_PATH_ENTRIES][INPUT_BUF];
+int lastPath;
 //----------------------- PATCH -------------------//
-  
 
 
 int
 exec(char *path, char **argv)
 {
+  char newPath[256];
   char *s, *last;
   int i, off;
   uint argc, sz, sp, ustack[3+MAXARG+1];
@@ -28,10 +28,10 @@ exec(char *path, char **argv)
   //----------------------- PATCH -------------------//
   if((ip = namei(path)) == 0){
       for(i = 0; i<lastPath; i++){
-	  cprintf("%d\n", i);
- 	  if ((ip = namei(PATH[i])) != 0){
-	     //cprintf("%d\n", ip);
-	      cprintf("found him!!\n");
+	  strncpy(newPath, PATH[i], 128);
+	  strncpy(newPath + strlen(newPath), path, 128);
+ 	  if ((ip = namei(newPath)) != 0){
+	      cprintf("found it!!\n");
 	      goto cont;
 	  }
       }

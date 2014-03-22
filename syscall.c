@@ -99,7 +99,7 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 //------------------- PATCH -------------------//
-extern int sys_addPath(void);
+extern int sys_add_path(void);
 //------------------- PATCH -------------------//
 
 static int (*syscalls[])(void) = {
@@ -125,7 +125,7 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 //------------------- PATCH -------------------//
-[SYS_addPath] sys_addPath,
+[SYS_add_path] sys_add_path,
 //------------------- PATCH -------------------//
   
 };

@@ -16,7 +16,7 @@
 00000000 printf.c
 000004d0 putc
 000004f8 printint
-00000c08 digits.888
+00000c08 digits.890
 00000000 umalloc.c
 00000c20 base
 00000c28 freep
@@ -29,11 +29,11 @@
 000004a8 getpid
 0000088b malloc
 000004b8 sleep
-000004c8 addPath
 00000438 pipe
 00000448 write
 00000480 fstat
 00000458 kill
+000004c8 add_path
 00000498 chdir
 00000460 exec
 00000430 wait

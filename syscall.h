@@ -22,5 +22,5 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 //------------------- PATCH -------------------//
-#define SYS_addPath 22
+#define SYS_add_path 22
 //------------------- PATCH -------------------//

@@ -736,8 +736,7 @@ SYSCALL(uptime)
  4c5:	cd 40                	int    $0x40
  4c7:	c3                   	ret    
 
-000004c8 <addPath>:
-SYSCALL(addPath)
+000004c8 <add_path>:
  4c8:	b8 16 00 00 00       	mov    $0x16,%eax
  4cd:	cd 40                	int    $0x40
  4cf:	c3                   	ret    

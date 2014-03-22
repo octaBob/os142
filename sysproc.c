@@ -8,10 +8,19 @@
 
 //------------------- PATCH -------------------//
 
-extern int add_path(char *);
+int add_path(char* path){
+  if (lastPath==10){
+    cprintf("could not add path - all paths in use\n");
+    exit();
+  }
+  strncpy(PATH[lastPath], path, strlen(path)+1);
+  cprintf("path added '%s'\n", PATH[lastPath]);
+  lastPath++;
+  return 0;
+}
 
 int
-sys_addPath(void)
+sys_add_path(void)
 {
   char *path;
   if(argstr(0, &path) < 0)

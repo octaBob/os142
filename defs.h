@@ -8,6 +8,11 @@ struct spinlock;
 struct stat;
 struct superblock;
 
+//--------------------- added ---------------------------------//
+#define INPUT_BUF   128  // max size of input buffer
+#define MAX_PATH_ENTRIES 10 // max number of path entries history
+//--------------------- added ---------------------------------//
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -22,7 +27,10 @@ void            panic(char*) __attribute__((noreturn));
 
 // exec.c
 int             exec(char*, char**);
-
+//--------------------- PATCH ---------------------------------//
+extern char PATH[MAX_PATH_ENTRIES][INPUT_BUF];
+extern int lastPath;
+//--------------------- PATCH ---------------------------------//
 // file.c
 struct file*    filealloc(void);
 void            fileclose(struct file*);

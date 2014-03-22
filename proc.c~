@@ -9,9 +9,9 @@
 
 //----------------------- PATCH -------------------//
 extern int lastPath;
-extern char* PATH[];
+extern char** PATH;
 
-int add_path(char* path){
+extern int add_path(char* path){
   if (lastPath==9){
     cprintf("could not add path - all paths in use\n");
     return -1;

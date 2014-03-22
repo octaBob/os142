@@ -12,13 +12,13 @@
 00000000 .debug_loc
 00000000 .debug_ranges
 00000000 usertests.c
-00005ee0 args.1222
+00005ee0 args.1224
 00000000 ulib.c
 000039c4 stosb
 00000000 printf.c
 00003cd0 putc
 00003cf8 printint
-00005ecc digits.888
+00005ecc digits.890
 00000000 umalloc.c
 00005f60 base
 00005f68 freep
@@ -40,7 +40,6 @@
 00001b62 bigdir
 00002d7e forktest
 000002c0 writetest1
-00003cc8 addPath
 0000241d bigwrite
 00000b54 sharedfd
 00005ec8 randstate
@@ -53,6 +52,7 @@
 00003c80 fstat
 00003c58 kill
 00003375 validatetest
+00003cc8 add_path
 000028a0 rmdot
 00003c98 chdir
 0000065b exectest
