@@ -124,8 +124,11 @@ panic(char *s)
 //PAGEBREAK: 50
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
+#define UPARROW 0xE2
+#define DOWNARROW 0xE3
 #define LEFTARROW 0xE4
 #define RIGHTARROW 0xE5
+
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
 static void
@@ -198,18 +201,19 @@ struct {
 #define C(x)  ((x)-'@')  // Control-x
 
 //-----------------PATCH--------------------//
-#define MAX_HISTORY_BUF 128
-#define MAX_HISTORY_ENTRIES 20
-static char history[MAX_HISTORY_ENTRIES][MAX_HISTORY_BUF]; 
-static int hstryPos = 0;
+
+
+static char history[MAX_HISTORY_LENGTH][INPUT_BUF];
 static int hstryNext = 0;
+static int hstryPos = 0;
+static int numOentries = 0;
 //-----------------PATCH--------------------//
 
 
 void
 consoleintr(int (*getc)(void))
 {
-  int i;
+  int i,j;
   int c;
   acquire(&input.lock);
   while((c = getc()) >= 0){
@@ -225,22 +229,87 @@ consoleintr(int (*getc)(void))
         consputc(BACKSPACE);
       }
       break;
+       //------------------- PATCH ------------------//
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
 	consputc(BACKSPACE);
 	input.e--;
-	if(input.e < input.rm){
-	  for (i=input.e; i<input.rm; i++){
+	input.rm--;
+	if(input.e < input.rm){ //if cursor is not at end of sentance
+	  for (i=input.e; i<=input.rm; i++){
 	      input.buf[i % INPUT_BUF] = input.buf[i+1 %INPUT_BUF];
 	  }
 	  for(i = input.e; i <=input.rm; i++)
 	      consputc(input.buf[i %INPUT_BUF]);
+	  
 	  for(i = input.e; i <=input.rm; ++i)
 	      consputc(LEFTARROW);
 	}
+	
       }
       break;
-    //------------------- PATCH ------------------//
+    case UPARROW:
+	if(numOentries >=  MAX_HISTORY_LENGTH){
+	  if(!((hstryPos %  MAX_HISTORY_LENGTH) ==  (hstryNext+1 %  MAX_HISTORY_LENGTH))){
+	      for(i=input.w ; i<input.rm; i++){
+	      consputc(BACKSPACE);
+	      input.e--;
+	      }
+	      
+	      hstryPos--;
+	      for(i = input.w; i<input.rm; i++){
+		input.buf[i] = history[hstryPos][i];
+	      }
+	      cprintf("buf:%s\n",input.buf);
+	      input.e += strlen(history[hstryPos]);
+	      input.rm = input.e;
+	      for(i = input.w; i<input.rm; i++){
+		  consputc(input.buf[i]);
+	      }
+	      
+	    
+	  }
+	}
+	else{
+	  if((hstryPos %  MAX_HISTORY_LENGTH) > 0){
+	      for(i=input.rm ; i>input.w; i--){
+		  consputc(BACKSPACE);
+		  input.rm--;
+		  input.e--;
+	      }	
+	      hstryPos--;
+	      for(i = input.w,j=0; j<(strlen(history[hstryPos])); i++,j++){
+		  input.buf[i] = history[hstryPos][j];
+	      }
+// 	      cprintf("buf:%s\n",input.buf);
+// 	      input.e = strlen(history[hstryPos]);
+// 	      //cprintf("e:%d\n",input.e);
+// // 		  cprintf("buf:%s\n",input.buf);
+// 	      input.rm = input.e;
+// 
+// // 		  cprintf("rm:%d\n",input.rm);
+// // 		  cprintf("w:%d\n",input.w);
+// 	      for(i = input.w; i<=input.rm; i++){
+// 		  consputc(input.buf[i]);
+// 	      }
+// 	      for(i = input.w; i<input.rm-1; i++){
+// 		  consputc(LEFTARROW);
+// 	      }
+	      
+	  }
+	      
+	    }
+	break;
+	
+    case DOWNARROW:
+	if(hstryPos<=hstryNext){
+	    if(numOentries >  MAX_HISTORY_LENGTH){
+	      input.e++;
+	      consputc(RIGHTARROW);
+	    }
+	}
+	break;
+      
       
     case RIGHTARROW:
 	if(input.e < input.rm){
@@ -259,15 +328,15 @@ consoleintr(int (*getc)(void))
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
 	
-	if(c == '\n'){
+	if((c == '\n')&&(input.e<input.rm)){ // case of enter in mid of sentance
 	  
 	  input.e = input.rm;
 	  input.buf[input.e++ % INPUT_BUF] = c;
 	  consputc(c);
 	  //cprintf("buf enter after left:%s\n",input.buf);
 	}else{
-	 for (i=input.e; i<input.rm; i++){
- 	    input.buf[i % INPUT_BUF] = input.buf[i+1 %INPUT_BUF];
+	 for (i=input.rm; i>input.e; i--){ //put letter in middle of sentance
+ 	    input.buf[i % INPUT_BUF] = input.buf[i-1 %INPUT_BUF];
 	 }
 	  input.buf[input.e++ % INPUT_BUF] = c;
 	  consputc(c);
@@ -280,22 +349,30 @@ consoleintr(int (*getc)(void))
 	}
 
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
-	  cprintf("bufEnter:%s\n",input.buf);
+	  //cprintf("buf:%s\n",input.buf);
           input.w = input.e;
 	  input.rm = input.e;
 	  
 	  //
-	  char command[MAX_HISTORY_BUF];
-	  for (i=0; i < input.e - input.r; i++) {
-	    command[i] = input.buf[input.r + i];
+	  j =0;
+	  char command[INPUT_BUF];
+	  memset(&command[0], 0, sizeof(command));
+	  for (i=input.r; i < input.rm-1; i++) {
+	    command[j] = input.buf[i %INPUT_BUF];
+	    j++;
+	    //cprintf("buf:%s\n",input.buf);
 	  }
-	  command[i] = '\n'; 
+//  	  cprintf("command is:%s",command);
+	  //command[j-1] = '\n'; 
 	  strncpy(history[hstryNext],command,strlen(command));
-	  hstryNext = ((hstryNext + 1) % MAX_HISTORY_ENTRIES);
+	  hstryNext = ((hstryNext+1) %  MAX_HISTORY_LENGTH);
 	  hstryPos = hstryNext;
-	  
-	  cprintf("history:%s\n",history);
-	  //
+	  numOentries++;
+	  //cprintf("next:%d\n",hstryNext);
+// 	  for (i=0; i < hstryNext; i++) {
+// 	      cprintf("history:%s\n",history[i]);
+// 	  }
+
           wakeup(&input.r);
         }
       }
